@@ -14,9 +14,10 @@
 
     // @ts-ignore
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // do global
-    const url = "http://127.0.0.1:8000/api/v1/items/";
+    // @ts-ignore
+    const url = "https://" + document.domain + app.dataset.api;
     const dispatch = createEventDispatcher();
-    const eventname = 'newitem';
+    const eventname = 'updatetable';
     const notificationeventname = 'notification';
     const notification_success_data = {
                 add_class: "is-success is-light",
@@ -39,7 +40,7 @@
     TODO: Передать ошибку из бэкенда в формате json!? */
     function getErrorData(error) {
         const parser = new DOMParser();
-        let doc = parser.parseFromString(error, "text/html"); // error.reponse.data  for axios
+        let doc = parser.parseFromString(error, "text/html");
         let header = doc.getElementById('summary').children[0].textContent;
         let message = doc.getElementById('summary').children[1].textContent;
         return header + "<br>" + message;

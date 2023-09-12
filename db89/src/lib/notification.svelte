@@ -1,10 +1,7 @@
 <script>
     /**
-     * TODO: Сделать подкючаемым компонентам, а не родителеи для всех.
+     * Всплывающие в углу уведомления (ошибки).
      */
-    // import Items from "../item/items.svelte";
-    // import Organizations from "../organization/organizations.svelte";
-    // import Documents from "../document/documents.svelte";
 
     /* Notifications */
     export let text = 'Test text';         // Notification content
@@ -30,7 +27,3 @@ $:  if (display == "block") _opacity = opacity();
     {@html text}&nbsp; <button class="delete" on:click={()=>display='none'}></button>
 
 </div>
-
-<!-- <Items on:notification={handle}/> -->
-<!-- <Organizations on:notification={handle}/> -->
-<!-- <Documents on:notification={handle}/> -->

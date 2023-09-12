@@ -4,7 +4,9 @@
 
     // @ts-ignore
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // do global
-    const url = "http://127.0.0.1:8000/api/v1/items/";  // "http://127.0.0.1:8000/api/v1/items/";
+    // @ts-ignore
+    const url = "http://127.0.0.1:8000/api/v1/organizations/";
+    // const url = "https://" + document.domain + app.dataset.api;
 
     import Modal from "./modal/modal.svelte";
     let modal_show = false;
@@ -37,7 +39,7 @@
         for (let id of checkboxes.values()) {
             _errordelete += await deleteItem(id);
         };
-        dispatch('deleteitem'); // loadTable();
+        dispatch('updatetable'); // loadTable();
         if (_errordelete) {
             let notificationdata = {...notification_error_data};
             notificationdata.text += _errordelete;

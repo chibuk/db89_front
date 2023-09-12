@@ -19,7 +19,8 @@
     let notificationadd_class = 'is-warning';
     let notification_text = 'Test text';
 
-    const url = "http://127.0.0.1:8000/api/v1/items/";
+    // @ts-ignore
+    const url = "https://" + document.domain + app.dataset.api;
 
      /* sorting data by "id" */
      function srt (a, b) {
@@ -56,16 +57,17 @@
         setTimeout(() => {notification_display='none';}, delay());
     }
 
+    document.querySelector("#navbar-item-items").classList.add("is-active");
 </script>
 <h4 class="title is-4 pl-4 pt-5">Список наименований груза</h4>
 <form>
     <div id={tablegen_id}></div>
     <Delete on:notification={notificationHandler} 
-            on:deleteitem={loadTable} 
+            on:updatetable={loadTable} 
             bind:disabled={button_disabled} />
 </form>
 <div class="box">
-    <Itemform on:newitem={loadTable} 
+    <Itemform on:updatetable={loadTable} 
               on:notification={notificationHandler} />
 </div>
 <Notification bind:text={notification_text} 

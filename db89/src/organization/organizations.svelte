@@ -2,10 +2,23 @@
     // import Organizationform from "./organizationform.svelte";   // POST Organization form
     import {onMount} from "svelte";
 
+    import Notification from "../lib/notification.svelte";
+    const notificationdata = {
+        text: "",
+        dispaly: "none",
+        add_class: "",
+    }
+
     import Delete from "../lib/delete.svelte";
     let button_disabled = true;
 
+    import Organizationform from "./organizationform.svelte";
+    import Modalcontainer from "../lib/modal/modalcontainer.svelte";
+    let activate_modal = false;
+
+    // @ts-ignore
     const url = "http://127.0.0.1:8000/api/v1/organizations/";
+    // const url = "https://" + document.domain + app.dataset.api;
 
     import Tablegen from "../lib/tablegen.svelte";  // Content
     let tablegen_instance;
@@ -33,11 +46,33 @@
         })
     }
 
+    const notificationHandler = (event) => {
+        notificationdata.text = event.detail.text;
+        notificationdata.add_class = event.detail.add_class;
+        notificationdata.dispaly = "block";
+        setTimeout(() => {notificationdata.dispaly='none';}, 10000);
+    }
+
     onMount(loadTable);
+    document.querySelector("#navbar-item-organizations").classList.add("is-active");
 </script>
-<h4 class="title is-4 pl-4 pt-5">Список организаций.</h4>
+
+<Modalcontainer bind:active={activate_modal}>
+    <Organizationform on:updatetable={loadTable} on:notification={notificationHandler} />
+</Modalcontainer>
+
+<h4 class="title is-4 pl-4 pt-5">Список организаций</h4>
+
 <form>
     <div id={tablegen_id}></div>
-    <Delete on:notification on:deleteitem={loadTable} bind:disabled={button_disabled} />
-</form> 
+    <Delete on:notification={notificationHandler} 
+            on:updatetable={loadTable} 
+            bind:disabled={button_disabled} />
+    <button class="button is-link is-outlined mt-1" on:click|preventDefault={()=>activate_modal=true}>
+        <i class="fa-light fa-plus"></i>
+    </button>
+</form>
 
+<Notification bind:display={notificationdata.dispaly} 
+              bind:text={notificationdata.text} 
+              bind:add_class={notificationdata.add_class} />

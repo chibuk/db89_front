@@ -2,16 +2,16 @@
     /*
     Input text element with Bulma CSS styles. Horizontal flex layot.
     */
-    export let label = "label";
-    export let placeholder = "Ввд текста...";
-    export let id = "id";
-    export let name = "name";
-    export let maxlength = 50;
-    export let required = true;
-    export let help = "help";
+    export let label = "";
+    export let placeholder = "";
+    export let id = "";
+    export let name = "";
+    export let maxlength = 256;
+    export let required = false;
+    export let help = "";
     export let input_class = "";            // + is-* Bulma class modifiers
     export let help_class = "";             // + is-* Bulma class modifiers
-    // export let type = "text";               // password | email | tel
+    export let type = "text";               // password | email | tel
     export let value ="";
     export let readonly = false;
     export let danger = false;   // class:is-danger={danger}

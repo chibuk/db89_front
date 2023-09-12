@@ -23,14 +23,14 @@
         if (_tag.checked) {
             yes.add(_tag.value);
             delete_button_enabled.update((n)=>true);
-            _tag.parentNode.parentNode.className = selected_class;
+            _tag.parentNode.parentNode.classList.add(selected_class);
         }
         else {
             // @ts-ignore
             document.querySelector(`#${all_checkboxes_selector}`).checked = false;
             yes.delete(_tag.value);
             if (yes.size == 0) delete_button_enabled.update((n)=>false);
-            _tag.parentNode.parentNode.className = '';
+            _tag.parentNode.parentNode.classList.remove(selected_class);
         }
     }
     /**
@@ -78,8 +78,7 @@
             receiver: "Получатель",
             payer: "Плательщик",
         };
-        t = voc[t] ? voc[t] : t;
-        return t;
+        return voc[t] ? voc[t] : t;
     }
 </script>
 <!-- Построить таблицу по данныи JSON |  class="table is-hoverable is-striped" -->
@@ -121,6 +120,9 @@
     top: 0;
     font-size: 1.1rem;
     background-color: white;
+    }
+    td:nth-child(1) {
+        width: 2rem;
     }
     div {
         height: 25rem;

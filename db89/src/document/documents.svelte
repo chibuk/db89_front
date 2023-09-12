@@ -5,6 +5,13 @@
     import Delete from "../lib/delete.svelte";
     let button_disabled = true;
 
+    import Modalcontainer from "../lib/modal/modalcontainer.svelte";
+    let activate_modal = false;
+
+    import Docitemform from "./docitemform.svelte";
+
+    // @ts-ignore
+    // const url = "https://" + document.domain + app.dataset.api;
     const url = "http://127.0.0.1:8000/api/v1/documents/";
 
     function _parse(data) {
@@ -18,6 +25,7 @@
     }
 
     import Tablegen from "../lib/tablegen.svelte";  // Content
+    import Documentform from "./documentform.svelte";
     let tablegen_instance;
     let tablegen_data = [];
     const href = "/document/"   // <a href=""> in Tablegen rows
@@ -46,9 +54,18 @@
     }
 
     onMount(loadTable);
+    document.querySelector("#navbar-item-documents").classList.add("is-active");
 </script>
-<h4 class="title is-4 pl-4 pt-5">Список документов.</h4>
+
+<Modalcontainer bind:active={activate_modal} width='60rem'>
+    <Documentform><Docitemform /></Documentform>
+</Modalcontainer>
+
+<h4 class="title is-4 pl-4 pt-5">Список документов</h4>
 <form>
     <div id={tablegen_id}></div>
-    <Delete on:notification on:deleteitem={loadTable} bind:disabled={button_disabled} />
+    <Delete on:notification on:updatetable={loadTable} bind:disabled={button_disabled} />
+    <button class="button is-link is-outlined mt-1" on:click|preventDefault={()=>activate_modal=true}>
+        <i class="fa-light fa-plus"></i>
+    </button>
 </form>
