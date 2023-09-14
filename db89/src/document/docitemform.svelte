@@ -3,7 +3,7 @@
     /**
      * Назначаем всем a.removeline обработчик удаления строки таблицы
      */
-    const setRemoveLineHandler = () => {
+    const setRemoveLineHandlers = () => {
         let removeline_tags = document.querySelectorAll('a.removeline');
         removeline_tags.forEach(function(a_tag){
             a_tag.addEventListener('click', function(e){
@@ -18,12 +18,12 @@
     // Добавление строки в конец таблицы
     const appendLine = (e) => {
         const line_HTML = `<tr class="item"><td class="count"><span></span></td>
-            <td><input type="text" name="name"></td>
-            <td><input type="number" class="num" name="seats"></td>
-            <td><input type="text" class="num" name="weight"></td>
-            <td><input type="text" class="num" name="volume"></td>
-            <td><input type="text" class="rub" name="price"></td>
-            <td><input type="text" class="rub" name="summ">
+            <td><input type="text" name="name" class='input is-small'></td>
+            <td><input type="number" class="num input is-small" name="seats"></td>
+            <td><input type="text" class="num input is-small" name="weight"></td>
+            <td><input type="text" class="num input is-small" name="volume"></td>
+            <td><input type="text" class="rub input is-small" name="price"></td>
+            <td><input type="text" class="rub input is-small" name="summ">
                 <a class="removeline" title="удалить строку" href="">
                     <span class="icon is-small has-text-grey-lighter"><i class="fa-light fa-xmark"></i></span>
                 </a>
@@ -73,7 +73,7 @@
         seats_inputs.forEach(function(seats_input){
             seats_input.addEventListener('input', (e)=>countSum(e));
         })
-        setRemoveLineHandler();
+        setRemoveLineHandlers();
     }
 
 </script>
@@ -93,21 +93,21 @@
     <tbody>
         <tr class="item">
             <td class="count"><span></span></td>
-            <td><input type="text" name="name"></td>
-            <td><input type="number" class="num" name="seats"></td>
-            <td><input type="text" class="num" name="weight"></td>
-            <td><input type="text" class="num" name="volume"></td>
-            <td><input type="text" class="rub" name="price"></td>
-            <td><input type="text" class="rub" name="summ"></td>
+            <td><input type="text" name="name" class="input is-small"></td>
+            <td><input type="number" class="num input is-small" name="seats"></td>
+            <td><input type="text" class="num input is-small" name="weight"></td>
+            <td><input type="text" class="num input is-small" name="volume"></td>
+            <td><input type="text" class="rub input is-small" name="price"></td>
+            <td><input type="text" class="rub input is-small" name="summ"></td>
         </tr>
         <tr class="item">
             <td class="count"><span></span></td>
-            <td><input type="text" name="name"></td>
-            <td><input type="number" class="num" name="seats"></td>
-            <td><input type="text" class="num" name="weight"></td>
-            <td><input type="text" class="num" name="volume"></td>
-            <td><input type="text" class="rub" name="price"></td>
-            <td><input type="text" class="rub" name="summ">
+            <td><input type="text" name="name" class="input is-small"></td>
+            <td><input type="number" class="num input is-small" name="seats"></td>
+            <td><input type="text" class="num input is-small" name="weight"></td>
+            <td><input type="text" class="num input is-small" name="volume"></td>
+            <td><input type="text" class="rub input is-small" name="price"></td>
+            <td><input type="text" class="rub input is-small" name="summ">
                 <a class="removeline" title="удалить строку" href="">
                     <span class="icon is-small has-text-grey-lighter"><i class="fa-light fa-xmark"></i></span>
                 </a>
@@ -128,6 +128,17 @@
 на новые строки скомпилированный идентификатор Svelte класса не применяется */
     :global(table#docitemform_table) {
         counter-reset: lines;
+        width: 100%;
+    }
+
+    :global(.input.is-small) {           /* table#docitemform_table input */
+        padding-top: calc(0.2em - 1px);
+        padding-bottom: calc(0.2em - 1px);
+        padding-left: calc(0.4em - 1px);
+        padding-right: calc(0.4em - 1px);
+        height: 1.5rem;
+        font-size: .85rem;
+        vertical-align: middle;
     }
 
     :global(table#docitemform_table tr.item) {
@@ -138,22 +149,21 @@
         content: counter(lines);
     }
 
-    :global(table#docitemform_table .item .count) {
+    :global(table#docitemform_table td) {
         vertical-align: middle;
     }
 
     :global(#docitemform_table .item .num) {
-        width: 4rem;
+        max-width: 4rem;
     }
     :global(#docitemform_table tr.item .rub) {
-        width: 6rem;
+        max-width: 6rem;
     }
     :global(#docitemform_table tr.item td) {
         white-space: nowrap;
     }
     :global(#docitemform_table tr.item td input) {
-        outline-color: rgb(91, 124, 201);
-        /* border-color: rgb(219, 219, 219); */
+        outline-color: rgba(91, 124, 201, .5);
         
     }
     :global(#docitemform_table i.fa-xmark:hover) {

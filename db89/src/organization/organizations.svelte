@@ -17,14 +17,14 @@
     let activate_modal = false;
 
     // @ts-ignore
-    const url = "http://127.0.0.1:8000/api/v1/organizations/";
-    // const url = "https://" + document.domain + app.dataset.api;
+    // const url = "http://127.0.0.1:8000/api/v1/organizations/";
+    const url = "https://" + document.domain + app.dataset.api;
 
     import Tablegen from "../lib/tablegen.svelte";  // Content
     let tablegen_instance;
     let tablegen_data = [];
     const href = "/organization/"   // <a href=""> in Tablegen rows
-    const tablegen_id = "tablegen_" + Math.round(Math.random()*10000);
+    const tablegen_id = "tablegen_" + Math.round(Math.random()*10000); //for fun
 
      /* sorting data by "id" */
      function srt (a, b) {

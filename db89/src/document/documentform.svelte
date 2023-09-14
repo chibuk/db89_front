@@ -1,12 +1,9 @@
-<script>
-   
-</script>
 
-<div class="box content is-max-desktop">
+<div class="box">
     <h5 class="title is-5 has-text-centered">Товарно-транспортная накладная</h5>
     <form>
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Номер и дата</label>
             </div>
             <div class="field-body">
@@ -23,7 +20,7 @@
         </div>
 
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Город</label>
             </div>
             <div class="field-body">
@@ -37,7 +34,7 @@
         </div>
 
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Номер ТС</label>
             </div>
             <div class="field-body">
@@ -51,7 +48,7 @@
         </div>
 
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Отправитель</label>
             </div>
             <div class="field-body">
@@ -69,7 +66,7 @@
         </div>
 
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Получатель</label>
             </div>
             <div class="field-body">
@@ -87,7 +84,7 @@
         </div>
 
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Плательщик</label>
             </div>
             <div class="field-body">
@@ -104,40 +101,40 @@
             </div>
         </div>
 
-        <div class="field is-horizontal">
-            <div class="field-label is-small">
+        <!-- <div class="field is-horizontal">
+            <div class="field-label is-small is-hidden-touch">
                 <label for="" class="label">Перевозимый груз</label>
             </div>
-            <div class="field-body">
+            <div class="field-body"> -->
                 <div class="field">
                     <div class="control">
                         <slot />
                     </div>
                 </div>
-            </div>
-        </div>
+            <!-- </div>
+        </div> -->
 
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Особые отметки</label>
             </div>
             <div class="field-body">
                 <div class="field">
                     <p class="control">
-                        <textarea class="textarea is-small" name="spec_notes" placeholder="введите текст" rows="2"></textarea>
+                        <textarea class="textarea is-small" name="spec_notes" placeholder="особые отметки" rows="2"></textarea>
                     </p>
                 </div>
             </div>
         </div>
 
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Адрес доставки</label>
             </div>
             <div class="field-body">
                 <div class="field">
                     <p class="control">
-                        <input type="text" class="input is-small" placeholder="адрес"
+                        <input type="text" class="input is-small" placeholder="адрес доставки"
                             name="destination_address" maxlength="256">
                     </p>
                 </div>
@@ -145,18 +142,17 @@
         </div>
 
         <div class="field is-horizontal">
-            <div class="field-label is-small">
+            <div class="field-label is-small is-hidden-mobile">
                 <label for="" class="label">Условия договора</label>
             </div>
             <div class="field-body">
                 <div class="field">
                     <p class="control">
-                        <textarea class="textarea is-small" name="text" id="" placeholder="введите текст" rows="3"></textarea>
+                        <textarea class="textarea is-small" name="text" id="" placeholder="условия договора" rows="3"></textarea>
                     </p>
                 </div>
             </div>
         </div>
-        
         
         <div class="field is-horizontal">
             <div class="field-label is-small">
@@ -173,6 +169,5 @@
                 </div>
             </div>
         </div>
-
     </form>
 </div>

@@ -77,8 +77,8 @@
     ]
 
 // @ts-ignore
-const url = "http://127.0.0.1:8000/api/v1/organizations/";
-// const url = "https://" + document.domain + app.dataset.api;
+// const url = "http://127.0.0.1:8000/api/v1/organizations/";
+const url = "https://" + document.domain + app.dataset.api;
 // @ts-ignore
 const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // do global
 
