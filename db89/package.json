@@ -10,7 +10,9 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.4.2",
+    "date-picker-svelte": "^2.6.0",
     "svelte": "^4.0.3",
+    "svelte-typeahead": "^4.4.1",
     "vite": "^4.4.0"
   },
   "dependencies": {
