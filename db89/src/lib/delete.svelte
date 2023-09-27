@@ -5,8 +5,8 @@
     // @ts-ignore
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // do global
     // @ts-ignore
-    // const url = "http://127.0.0.1:8000/api/v1/organizations/";
-    const url = "https://" + document.domain + app.dataset.api;
+    const url = "http://127.0.0.1:8000/api/v1/documents/";
+    // const url = "https://" + document.domain + app.dataset.api;
 
     import Modal from "./modal/modal.svelte";
     let modal_show = false;

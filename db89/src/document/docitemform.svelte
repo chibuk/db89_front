@@ -12,8 +12,8 @@
      * Получаем список наимаенований груза
      */
     async function fetchListItems () {
-        const _data = await fetch(url).then((x) => x.json());
-        data = JSON.parse(JSON.stringify(_data, ['name',]));    // оставляем только поля name (id убираем)
+        data = await fetch(url).then((x) => x.json());
+        // data = JSON.parse(JSON.stringify(_data, ['name',]));    // оставляем только поля name (id убираем)
     }
     /**
      * Устанавливаем классы на Inputlist'ы 
@@ -55,7 +55,7 @@
             <td><input type="text" class="num input is-small" name="weight"></td>
             <td><input type="text" class="num input is-small" name="volume"></td>
             <td><input type="text" class="rub input is-small" name="price"></td>
-            <td><input type="text" class="rub input is-small" name="summ">
+            <td><input type="text" class="rub input is-small" name="item_sum">
                 <a class="removeline" title="удалить строку" href="">
                     <span class="icon is-small has-text-grey-light"><i class="fa-light fa-xmark"></i></span>
                 </a>
@@ -99,7 +99,7 @@
     const countTotalSumm = () => {
         let _total = 0.0;
         let tbody = document.querySelector('#docitemform_table tbody');
-        let inputs = tbody.querySelectorAll('[name=summ]');
+        let inputs = tbody.querySelectorAll('[name=item_sum]');
         inputs.forEach(input => {
             // @ts-ignore
             _total += inputToFloat(input.value);
@@ -114,7 +114,7 @@
         let _seats = inputToFloat(tr.querySelector('[name=seats]').value); // берем сразу value, т.к. там type=number
         let _price = inputToFloat(tr.querySelector('[name=price]').value);
         let _summ = (_seats * _price);
-        tr.querySelector('[name=summ]').value = floatToInput(_summ);
+        tr.querySelector('[name=item_sum]').value = floatToInput(_summ);
         countTotalSumm();
     }
     /**
@@ -141,7 +141,7 @@
         seats_inputs.forEach(function(seats_input){
             seats_input.addEventListener('input', (e)=>countSum(e));
         })
-        let summ_inputs = document.querySelectorAll('[name=summ]');
+        let summ_inputs = document.querySelectorAll('[name=item_sum]');
         summ_inputs.forEach(element => {
             element.addEventListener('blur', (e)=>{
                 formatPrice(e);
@@ -174,7 +174,7 @@
             <td><input type="text" class="num input is-small" name="weight"></td>
             <td><input type="text" class="num input is-small" name="volume"></td>
             <td><input type="text" class="rub input is-small" name="price"></td>
-            <td><input type="text" class="rub input is-small" name="summ"></td>
+            <td><input type="text" class="rub input is-small" name="item_sum"></td>
         </tr>
         <tr class="item">
             <td class="count"><span></span></td>
@@ -183,7 +183,7 @@
             <td><input type="text" class="num input is-small" name="weight"></td>
             <td><input type="text" class="num input is-small" name="volume"></td>
             <td><input type="text" class="rub input is-small" name="price"></td>
-            <td><input type="text" class="rub input is-small" name="summ">
+            <td><input type="text" class="rub input is-small" name="item_sum">
                 <a class="removeline" title="удалить строку" href="">
                     <span class="icon is-small has-text-grey-light"><i class="fa-light fa-xmark"></i></span>
                 </a>
@@ -194,7 +194,8 @@
         <tr>
             <td></td>
             <td><a href="" on:click|preventDefault={appendLine}>+ строка</a></td>
-            <td></td><td></td><td></td><td align="right">Всего к оплате:</td><td><strong>{total_summ}</strong></td>
+            <td></td> <td></td> <td></td> <td align="right">Всего к оплате:</td>
+            <td><strong id='documentform-sum'>{total_summ}</strong></td>
         </tr>
     </tfoot>
 </table>

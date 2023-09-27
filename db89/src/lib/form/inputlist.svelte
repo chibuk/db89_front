@@ -30,6 +30,7 @@
         let _strng = '';        // строка
         let _mdash = ' - ';     // разделитель
         for (let key in item) {
+            if (key == 'id') continue;  // пропускаем идентификатор для передачи на сервер: id
             _strng += item[key] + _mdash;
         }
         return _strng.slice(0,-3); // срезаем последний разделитель
@@ -38,7 +39,7 @@
 </script>
 
 <div class='sv-inputlist'>
-    <Typeahead hideLabel={true} {data} {extract} let:value
+    <Typeahead hideLabel={true} {data} {extract}
         on:select
         on:clear
         {placeholder}>

@@ -18,13 +18,24 @@
     const url = "http://127.0.0.1:8000/api/v1/documents/";
 
     function _parse(data) {
-        let pre = JSON.parse(JSON.stringify(data, ['id', 'number', 'data', 'city', 'truck', 'destination_address',]));
+        let pre = JSON.parse(JSON.stringify(data, [     // оставим нужные поля
+            'id', 'number', 'city', 'truck', 'destination_address', 'doc_sum',
+        ]));
         for (let i=0; i<pre.length; i++) {
-            pre[i].sender = data[i].sender.name;
-            pre[i].receiver = data[i].receiver.name;
-            pre[i].payer = data[i].payer.name;
+            pre[i].sender = (data[i].sender) ? data[i].sender.name : '';
+            pre[i].receiver = (data[i].receiver) ? data[i].receiver.name : '';
+            pre[i].payer = (data[i].payer) ? data[i].payer.name : '';
+            pre[i].date = new Date(data[i].date).toLocaleDateString("ru");
+            pre[i].created = '<i class="fa-light fa-calendar-circle-plus" title="' +
+                            new Date(data[i].created).toLocaleString("ru") + '"></i>';
+            
+            pre[i].modified = "<i class='fa-light fa-calendar-pen' title='" + 
+                            new Date(data[i].modified).toLocaleString("ru") + "'></i>";
+            pre[i].document = pre[i].number + " от " + pre[i].date;
         } 
-        return pre;
+        return JSON.parse(JSON.stringify(pre, [     // Изменим порядок полей
+            'id', 'document', 'doc_sum', 'sender', 'receiver', 'payer', 'city', 'truck', 'destination_address', 'created', 'modified',
+        ]));
     }
 
     import Tablegen from "../lib/tablegen.svelte";  // Content
@@ -62,7 +73,6 @@
 <Modalcontainer bind:active={activate_modal}
                 modal_style='justify-content: flex-start'
                 content_style='top: 3rem; max-width: 70rem; min-width: 25rem; width: 100%; max-height: calc(100% - 3rem)'>
-    <!-- <butoon class="delete is-pulled-right mt-1 mr-1" on:click={()=>activate_modal=false}></butoon> -->
     <Documentform bind:actiate_form={activate_modal}><Docitemform /></Documentform>
 </Modalcontainer>
 <h4 class="title is-4 pl-4 pt-5">Список документов</h4>

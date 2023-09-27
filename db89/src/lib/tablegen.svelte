@@ -68,7 +68,7 @@
             kor_acount: "Корр. счёт",
             phone: "Телефон",
             number: "Номер",
-            data: "Дата",
+            date: "Дата",
             city: "Город",
             truck: "Номер машины",
             spec_notes: "Особые отметки",
@@ -77,6 +77,10 @@
             sender: "Отправитель",
             receiver: "Получатель",
             payer: "Плательщик",
+            created: " ",
+            modified: " ",  // если оставить "", то выведет "modified"
+            document: "Документ",
+            doc_sum: "Сумма"
         };
         return voc[t] ? voc[t] : t;
     }
@@ -105,7 +109,7 @@
                 </td>
                 {#each cells.slice(2) as cell_content}
                     <td>
-                        {cell_content}
+                        {@html cell_content} <!-- Опасность что из БД загрузится инъекция js-кода, валидацию при сохранении делать!!! -->
                     </td>
                 {/each}
             </tr>
@@ -118,7 +122,7 @@
     th {
     position: sticky;
     top: 0;
-    font-size: 1.1rem;
+    font-size: .9rem;
     background-color: white;
     }
     td:nth-child(1) {
@@ -129,7 +133,7 @@
         overflow: auto;
         border: 1px solid #909090;
     }
-    a {
+    td a {
         color: chocolate;
     }
 
