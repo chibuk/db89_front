@@ -10,9 +10,8 @@
     
     import Tablegen from "../lib/tablegen.svelte";  // Content
     const href = "/item/";   // <a href=""> in Tablegen rows
-    let tablegen_instance;
-    let tablegen_data = [];
-    const tablegen_id = "tablegen_" + Math.round(Math.random()*10000);
+    let tablegen_instance = undefined;
+    const tablegen_id = "tablegen_id";
 
     import Notification from "../lib/notification.svelte";
     let notification_display = 'none';
@@ -21,23 +20,16 @@
 
     // @ts-ignore
     const url = "https://" + document.domain + app.dataset.api;
+    // const url = "http://127.0.0.1:8000/api/v1/items/";    //dev
 
-     /* sorting data by "id" */
-     function srt (a, b) {
-        if (a.id < b.id) return 1;
-        else if (a.id > b.id) return -1;
-        else return 0;
-    }
-
-    const loadTable = async () => {
-        tablegen_data = await fetch(url).then((x) => x.json());    
+    const loadTable = async () => {    
         tablegen_instance?.$destroy();
         tablegen_instance = new Tablegen({
             target: document.getElementById(tablegen_id),
             props: {
-                table_content: tablegen_data.sort(srt),
+                url: url,
                 href: href,
-                checkbox_name: 'id',
+                fields: ['id', 'name'],
             }
         })
     }
@@ -60,16 +52,19 @@
     document.querySelector("#navbar-item-items").classList.add("is-active");
 </script>
 <h4 class="title is-4 pl-4 pt-5">Список наименований груза</h4>
-<form>
+<form on:submit|preventDefault>
     <div id={tablegen_id}></div>
     <Delete on:notification={notificationHandler} 
             on:updatetable={loadTable} 
-            bind:disabled={button_disabled} />
-</form>
-<div class="box">
+            bind:disabled={button_disabled} uriPath='items'/>
     <Itemform on:updatetable={loadTable} 
               on:notification={notificationHandler} />
-</div>
+</form>
 <Notification bind:text={notification_text} 
               bind:add_class={notificationadd_class} 
               bind:display={notification_display} />
+<style>
+    form {
+        height: calc(100% - 5rem);
+    }
+</style>

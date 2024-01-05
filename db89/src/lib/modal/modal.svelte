@@ -21,12 +21,7 @@
         active = false;
         dispatch(eventname, modal_return);
     }
-    // function handleKeydown(event) {
-	// 	if (event.code === 'Enter') handleSubmit();
-    //     if (event.code === 'Escape') handleReset();
-	// }
 </script>
-<!-- <svelte:window on:keydown={handleKeydown} /> -->
 <div class="modal" class:is-active={active}>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -35,7 +30,6 @@
         <form class="message is-warning" 
             on:submit|preventDefault={handleSubmit} 
             on:reset|preventDefault={handleReset}>
-            <!-- <div class="message-header">Внимание!</div> -->
             <div class="message-body">
                 <div class="container content">
                    {@html htmldata}

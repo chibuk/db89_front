@@ -1,12 +1,13 @@
 <script>
     import { onDestroy } from 'svelte';
     import { delete_button_enabled } from '../item/stores';
+    export let uriPath = '';
 
     // @ts-ignore
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // do global
     // @ts-ignore
-    const url = "http://127.0.0.1:8000/api/v1/documents/";
-    // const url = "https://" + document.domain + app.dataset.api;
+    // const url = `http://127.0.0.1:8000/api/v1/${uriPath}/`;      // dev
+    const url = "https://" + document.domain + app.dataset.api;
 
     import Modal from "./modal/modal.svelte";
     let modal_show = false;
@@ -15,7 +16,7 @@
     import { createEventDispatcher } from 'svelte';
     const dispatch = createEventDispatcher();
 
-    export let disabled = true;    // disablesd button
+    export let disabled = true;    // disabled button
     let _subscription = delete_button_enabled.subscribe((value)=>disabled=value);  
     onDestroy(_subscription);
     
@@ -35,9 +36,9 @@
         if (!event.detail) return;
         const _form = event_currentTarget.parentElement;
         let _errordelete = '';
-        const checkboxes = new FormData(_form); // чекбоксы [['id','1'], ['id','2']
+        const checkboxes = new FormData(_form); // чекбоксы [['id','1'], ['id','2']]
         for (let id of checkboxes.values()) {
-            _errordelete += await deleteItem(id);
+            if (id) _errordelete += await deleteItem(id);
         };
         dispatch('updatetable'); // loadTable();
         if (_errordelete) {
@@ -66,8 +67,11 @@
     }
 </script>
 
-<button type="submit" class="button is-link is-outlined mt-1 ml-2" on:click|preventDefault={modalDeleteShow} disabled={!disabled}
-title="Удалить отмеченные">
+<button type="submit" class="button is-link is-outlined mt-1 ml-2" 
+    on:click|preventDefault={modalDeleteShow} 
+    disabled={!disabled}
+    title="Удалить отмеченные">
     <i class="fa-light fa-trash-xmark"></i>
+    <div id="tgen_change_inform"></div>
 </button>
 <Modal htmldata={modal_data} bind:active={modal_show} on:modalevent={deleteItems} />

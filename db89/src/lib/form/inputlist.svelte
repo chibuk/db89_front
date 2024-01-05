@@ -1,8 +1,8 @@
 <script>
 // @ts-nocheck
-
     import Typeahead from "svelte-typeahead";    // поле ввода с поиском и выпадающим списком
     export let placeholder = 'наименование';
+    export let no_result = 'Не найдено!';
     export let data = [];       // Массив с объектами для поиска с примером
     //     {
     //         "name": "ИП Крутой Хорёк",
@@ -44,7 +44,7 @@
         on:clear
         {placeholder}>
         <div slot="no-results">
-            Не найдено. <a href="">Создать новую запись?</a>
+            {@html no_result}
         </div>
     </Typeahead>
 </div>

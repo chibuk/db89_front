@@ -1,18 +1,91 @@
 <script>
+    export let editDocument_id = -1;    // -1 (создание документа) | id (редактирование документа, или копирование)
+    export let copy = false;            // true if copy mode
     import { onMount } from "svelte";
-
     import { DateInput } from 'date-picker-svelte';
-    let date = new Date();
+    import { createEventDispatcher } from 'svelte';
+    const dispatch = createEventDispatcher();
+    import Docitemform from "./docitemform.svelte";
 
     // @ts-ignore
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // do global
+    const url = {
+        // base: "http://127.0.0.1:8000/api/v1/",              // dev
+        // @ts-ignore
+        base: "https://" + document.domain + '/api/v1/', // deploy 
+        get org() {return this.base + "organizations/"},
+        get num() {return this.base + "documentnumber/"},
+        get documents() {return this.base + "documents/"},
+        get documentitems() {return this.base + "documentitems/"}
+    };
 
+    import SimpleAutoComplete from "../lib/form/SimpleAutoComplete.svelte";
+    let ac_props = {
+        labelFieldName: "name",
+        valueFieldName: "id",
+        maxItemsToShowInList: 4,
+        delay: 350,
+        minCharactersToSearch: 2,
+        create: false,
+        lowercaseKeywords: false,
+        // hideArrow: true,        // не работало пришлось убрать в исходниках hideArrow и showClear
+        noInputStyles: true,
+        // showClear: true,  // заменил на <input type=search>
+        showLoadingIndicator: true,
+        loadingText: "Загрузка...",
+        moreItemsText: "не показано",
+        noResultsText: "Не найдено",
+        // createText: 'Не найдено, "Enter", чтобы создать.',
+        placeholder: "наименование или ИНН",
+        className: 'is-size-7',
+        inputClassName: "input is-small",
+        // name: "", // input name задаем каждому инстансу на месте
+        searchFunction: searchOrganization, // по ИНН или названию
+        localFiltering: false,      // чтобы при поиске по ИНН не скрывались результаты
+        required: true,
+        // onCreate: createItem,    // делать или нет, пока не решил
+    }
 
-    const send = async function (data, url){
-        // let notificationdata = {...notification_success_data};
+    async function searchOrganization (keyword) {
+        const response = await fetch(url.org + "search/" + encodeURIComponent(keyword));
+        return await response.json();
+    }
+
+    function clearForm() {
+        selected.sender = '';
+        selected.receiver='';
+        selected.payer='';
+        let _qSelector = `input[name=name], input[name=seats], input[name=volume], 
+                        input[name=weight], input[name=price], input[name=item_sum],
+                        input[name=payer], input[name=receiver], input[name=sender]`
+        let _inputs = document.querySelectorAll(_qSelector);
+        _inputs.forEach(input => {
+            // @ts-ignore
+            input.value = '';
+        });
+        if (documentformdata.id) {  // документ редактируется, очищаем кроме id, number, date
+            let id = documentformdata.id;
+            let number = documentformdata.number;
+            let date = documentformdata.date;
+            documentformdata = DocumentClass(id, number, date);
+        } else documentformdata = DocumentClass();
+    }
+    /**
+     * Реализуем возможность "досохранить" документ. После его записи (Document POST), 
+     * некоторые строки таблицы (DocumentItem POST)
+     * могут не пройти валидацию и придется их исправлять и снова нажимать "сохранить", но
+     * документ уже в БД записан, повторно записать тот же документ нельзя, поэтому делаем PUT,
+     * т.е. перезапись существующего. Наличие значения переменной -> метод PUT.
+     */
+    // documentformdata.id = '';   // идентификатор текущего документа после сохранения
+    const postData = async function (data, url, method='post'){
+        let answer = {
+            ok: false,   // успешно (true)
+            resp: {},
+        }
         try {
             const response = await fetch(url, {
-                method: 'post',
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken,
@@ -20,144 +93,275 @@
                 body: JSON.stringify(data),
             });
             if(response.ok) {
-                // dispatch(eventname, {'response': await response.json()})
-                return response.json();
+                answer.ok = true;
+                answer.resp = await response.json();
             }
             else {
-                throw(new Error(`${response.status} - ${response.statusText}`)) // <br>${getErrorData(await response.text())}`));
+                answer.resp = await response.json();
             }
         }
         catch (error) {
-            // notificationdata = {...notification_error_data};
-            // notificationdata.text += error.message;
-            alert(error.message);
-            return error;
+            answer.resp.error = error.message + ' - Нет связи с сервером.';
         }
         finally {
-            // dispatch(notificationeventname, notificationdata);
+            return answer;
         }
     }
 
-
-
-    import Inputlist from "../lib/form/inputlist.svelte";
-    const placeholders = {
-        sender: 'отправитель',
-        payer: 'плательщик',
-        receiver: 'получатель',
+    let selected = {    // для записи результата выбора (id)
+        sender: '',
+        payer: '',
+        receiver: '',
     }
-    let list_org = [{name: 'загрузка...'}]; // список объектов для поиска
-    const class_list = ['input', 'is-small',];
-    let selected = {    // для записи результата выбора
-        sender: {},
-        payer: {},
-        receiver: {},
-    };
     /**
-     * Получаем массив из объектов DocumentItem из строк табличной части
+     * Получаем массив для объектов DocumentItem из строк табличной части и сохраняем в БД.
+     * Парсит построчно табличную часть. Успешно "сохранённые строки" помечает атрибутом
+     * tr data-id="id", чтобы при повторном прогоне его проверить и пропустить строку.
+     * Если строка с ошибкой (нет наименования, количества или что-то в ответе сервера),
+     * подсвечиваем и пропускаем её, продолжаем со следующей строки.
+     * Если все строки сохранились, return true, и окно закроется,
+     * если не все, то false и окно останется открытым для исправления подсвеченных ошибок.
+     * Если режим copy, то в первую очередь удаляем со всех строк data-id...
      */
-    const getDocumentItems = () => {
-        let docitemsdata = []; // объект с данными, который вернём
+    const postDocumentItems = async (document_id) => {
+        let _return = {
+            ok: true,
+            // sum: 0,  // сумму документа теперь считает сервер после каждого DocumentItem
+        }
         let rows = document.querySelectorAll('tr.item');    // строки
-        rows.forEach(tr => {
-            let row_data = {};                              // данные строкИ для массива
+        for(let tr of rows) {
             let inputs = tr.querySelectorAll('input');      // все инпуты на строке
+            let row_data = {};                              // данные строкИ для массива
+            let _method = "post";                           // POST | PUT
+            let _url = url.documentitems;
+            // @ts-ignore
+            if (copy) tr.dataset.id = '';
+            // @ts-ignore
+            if (tr.dataset.id) { row_data.id = tr.dataset.id;
+                _method = "put";
+                _url = url.documentitems + row_data.id + "/";
+            } // если есть id, значит строка редактируется TODO:...
             inputs.forEach(input => {
                 row_data[input['name']] = input["value"];   // сохраняем name: value
             });
-            row_data.name = row_data.search;                // из виджета DateInput надо "search" переименовать в "name"
-            delete row_data.search;
             row_data.price = inputToFloat(row_data.price);  // в формат числа
             row_data.item_sum = inputToFloat(row_data.item_sum);
-            if (row_data.item_sum != 0 && row_data.name.trim() != '') { // только если есть наименование и сумма
-                docitemsdata.push(row_data);
+            row_data.seats = parseInt(row_data.seats);
+            if (row_data.name.trim() === '' && !row_data.id) { // если наименование не заполнено м строка не из БД
+                if (row_data.item_sum == 0) continue ;      // и нет суммы, то игнорируем строку
+                // @ts-ignore
+                fillErrorDocumentFormData({name: ['Введите наименование!']}, target=tr);
+                _return.ok = false;
+                continue;
+            } 
+            else { // если есть наименование
+                row_data.document = document_id;
+                let response = await postData(row_data, _url, _method);
+                if (!response.ok) {
+                    // @ts-ignore
+                    fillErrorDocumentFormData(response.resp, target=tr); // подсветим ошибки
+                    _return.ok = false;
+                    continue;
+                }
+                else { // сохранилось успешно
+                    // @ts-ignore
+                    tr.dataset.id = response.resp.id;   // id запмсм в БД
+                }
             }
-            
-        });
-        return docitemsdata;
+        }
+        copy = false;
+        return _return;    // все строки сохранились, либо нечего сохранять
     }
 
-    let documentformdata = {};
+    function DocumentClass (
+        id='',                  // для операции редактирования существующего документа
+        number='',              
+        date='',                // "YYYY-mm-dd", дата
+        city='',                // Город
+        truck='',               // авто
+        spec_notes='',          // особые отметки
+        destination_address='', // адрес доставки
+        text='',                // условия договора
+        doc_sum=0.0,            // всего к оплате
+        sender=undefined,       // id отправтеля
+        receiver=undefined,     // id получателя
+        payer=undefined) {      // id плательщика
+        return {
+            id, number, date, city, truck, spec_notes, destination_address, text, doc_sum, sender, receiver, payer
+        }
+    }
+    
     /**
-     * Собираем все данные с форм и инпутов для сохранения в БД
-     * @param e может надо убрать... Сделать отдельный хендлер?
+     * В данном объекте поля связаны тегами через bind. поэтому можно им назначить значение оно отобразится,
+     * только поля из сторонних виджетов недоступны для связывания: date, sender, payer, receiver
+     * их надо обновлять отдельно (для редактирования документа или обработки ошибок)
      */
-    const getDocumentFormData = async (e) => {
+    let documentformdata = DocumentClass();
+    // let documentformdata = {
+    //     "id": "",       // для операции редактирования существующего документа
+    //     "number": "",   // "Т03", номер документа
+    //     "date": "",     // "2003-01-01", дата
+    //     "city": "",     // Город
+    //     "truck": "",    // Номер авто
+    //     "spec_notes": "",   // особые отметки
+    //     "destination_address": "", // адрес доставки
+    //     "text": "",     // условия договора
+    //     "doc_sum": 0,   // всего к оплате
+    //     "sender": undefined,    // id отправтеля
+    //     "receiver": undefined,  // id получателя
+    //     "payer": undefined,     // id плательщика
+    // };
+    /**
+     * здесь данные предыдущего документа БД для автозаполнения по клику на Label
+     * или исходные данные документа, который сейчас на редактировании
+     * */ 
+    let lastdocument = DocumentClass();   
+    async function fillFieldHandler() {
+        if (!copy && editDocument_id === -1) {
+            lastdocument = await fetch(url.documents+'last/').then((x) => x.json());
+        }
+        let field = this.parentNode.parentNode.querySelector('input');
+        if (!field) field = this.parentNode.parentNode.querySelector('textarea');
+        documentformdata[field.name] = lastdocument[field.name];
+    }
+    async function fillOrgHandler() {
+        if (!copy && editDocument_id === -1) {
+            lastdocument = await fetch(url.documents+'last/').then((x) => x.json());
+        }
+        let field = this.parentNode.parentNode.querySelector('input');
         // @ts-ignore
-        documentformdata.number = document.querySelector('[name="number"]').value; // номер документа
+        document.querySelector(`input[name=${field.name}]`).value = lastdocument[field.name]['name'];
+        selected[field.name] = lastdocument[field.name]['id'];
+    }
+    /**
+     * Собираем все данные с форм и инпутов
+     */
+    const postDocumentFormData = async () => {
         // @ts-ignore
-        let _date = document.querySelector('.date-time-field input').value.split('.'); // дата dd.mm.YYYY->[dd,mm,YYYY]
-        documentformdata.date = _date[2] + '-' + _date[1] + '-' + _date[0]; // YYYY-mm-dd
-        let _form = e.currentTarget;
-        const _formData = new FormData(_form);
-        let _formObject = Object.fromEntries(_formData.entries());    // формат в объект
-        // @ts-ignore
-        _formObject.doc_sum = inputToFloat(document.querySelector('#documentform-sum').textContent); // сумма документа
-        // let itemsdata = getDocumentItems();     // табличная часть
-        documentformdata = {...documentformdata, ..._formObject,} // ...selected,}; // ...itemsdata}; // собираем всё вместе
-        documentformdata.sender = selected.sender.id;
-        documentformdata.receiver = selected.receiver.id;
-        documentformdata.payer = selected.payer.id;
-        if (!(documentformdata.number.trim() && documentformdata.date.trim())) {
-            alert("надо заполнить номер и дату обязательно");
+        let _date = document.querySelector('.date-time-field input').value.split('.').reverse().join('-'); // дата dd.mm.YYYY->YYYY-mm-dd
+        documentformdata.date = _date
+        documentformdata.sender = parseInt(selected.sender);
+        documentformdata.receiver = parseInt(selected.receiver);
+        documentformdata.payer = parseInt(selected.payer);
+        // проверки заполнения формы
+        let _status = {
+            ok: true,
+            data: {}
+        }
+        if (!documentformdata.number.trim()) {
+            _status.ok = false;
+            _status.data.number = ["Введите номер!"];
+        }
+        if (!/^\d\d\d\d-\d\d-\d\d$/.test(documentformdata.date)) {
+            alert("Формат даты документа не верный");
             return
         }
-        let _formdata = {...documentformdata};
-        let _response = await send(_formdata, url.documents);    // documetn is saved, TODO: parse errors
-        let itemsdata = getDocumentItems();
-        itemsdata.forEach(item => {
-            // alert(JSON.stringify(_response));
-            item.document = _response.id;
-            let _resp = send(item, url.documentitems);
-        });
-        // 1 - сохранить документ (обработка валидации)
-        // 2 - перебирая, сохранить каждую запись таблицы (обработка валидации)
-        // успешно завершено - очистить форму и (?) закрыть модальное окно.
+        if (!documentformdata.sender){
+            _status.ok = false;
+            _status.data.sender = ["Выберите отправителя, начните вводить ИНН или наименование!"];
+        }
+        if (!documentformdata.receiver){
+            _status.ok = false;
+            _status.data.receiver = ["Выберите получателя, начните вводить ИНН или наименование!"];
+        }
+        if (!documentformdata.payer){
+            _status.ok = false;
+            _status.data.payer = ["Выберите плательщика, начните вводить ИНН или наименование!"];
+        }
+        if (!_status.ok) {
+            fillErrorDocumentFormData(_status.data);
+            return
+        }
+        let _method = 'post';
+        let _int_pk = '';
+        if (documentformdata.id) {    // если этот документ был уже сохранен
+            _method = "put";
+            _int_pk = documentformdata.id + '/';
+        }
+        // сохраняем в БД сервера
+        let postDocument = await postData(documentformdata, url.documents+_int_pk, _method);    // document is saved
+        if (!postDocument.ok) { // обработаем ошибки - подсветим поля и вставим текст сообщения об ошибке
+            fillErrorDocumentFormData(postDocument.resp)
+            return
+        }
+        dispatch('updatetable');    // отправим событие, обновить список документов
+        documentformdata.id = postDocument.resp.id;
+        let itemsdata = await postDocumentItems(postDocument.resp.id);
+        if (itemsdata.ok) {
+            dispatch('closemodal');
+        }
     }
 
-    const url = {
-        base: "http://127.0.0.1:8000/api/v1/",              // dev
+    /**
+     * сервер вернул объекты с ошибками {field: "error_message"}
+     * назначаем соответствующим полям клвсс "is-danger" и title='error_message'
+     * а ещё однократный обработчик события "input", чтобы убрать выделение,
+     * клгда пользователь начнет исправлять содержимое поля.
+     * @param data
+     */
+    const fillErrorDocumentFormData = (data, target=document) => {
+        for (let key in data) {         // перебираем объекты
+            let element = target.querySelector(`[name=${key}]`);
+            element.setAttribute('title', data[key]);
+            element.classList.add('is-danger');
+            element.addEventListener("input", (e)=>{
+                // @ts-ignore
+                e.currentTarget.classList.remove('is-danger');
+                // @ts-ignore
+                e.currentTarget.removeAttribute('title');
+            }, {once: true});
+        }
+    }
+
+    async function getDocumentNumber () {
+        let number = '';
+        if (documentformdata.id && !copy) number = lastdocument.number;
+        else {
+            const _data = await fetch(url.num).then((x) => x.json());
+            number = _data["number"];
+        }
+        documentformdata.number = number;
+    }
+    /**
+     * редактирование, либо создание копии документа editDocument_id
+     */
+    async function getDocumentEditData () {
+        lastdocument = await fetch(url.documents+editDocument_id+'/').then((x) => x.json());
+        lastdocument.date = lastdocument.date.split('-').reverse().join('.'); // 2022-01-02 ->  02.01.2022
+        if (copy) {
+            lastdocument.id = undefined;
+            await getDocumentNumber();
+            lastdocument.number = documentformdata.number;
+            lastdocument.date = new Date().toLocaleDateString();
+        }
         // @ts-ignore
-        // base: "https://" + document.domain + '/api/v1/', // deploy 
-        get org() {return this.base + "organizations/"},
-        get num() {return this.base + "documentnumber/"},
-        get documents() {return this.base + "documents/"},
-        get documentitems() {return this.base + "documentitems/"}
-    };
-    
-    async function fetchListOrg () {
-        const _data = await fetch(url.org).then((x) => x.json());
-        list_org = JSON.parse(JSON.stringify(_data, ['name', 'inn', 'id',]));
-    }
-
-    let doc_number = "";
-    async function fetchDocumentNumber () {
-        const _data = await fetch(url.num).then((x) => x.json());
-        doc_number = _data["number"];
+        document.querySelector('.date-time-field input').value = lastdocument.date;
+        for (let field of ['id','number','city','truck','spec_notes','destination_address',
+            'text','doc_sum']) documentformdata[field] = lastdocument[field];
+        // @ts-ignore
+        document.querySelector('input[name=sender]').value = lastdocument['sender']['name'];
+        // @ts-ignore
+        document.querySelector('input[name=receiver]').value = lastdocument['receiver']['name'];
+        // @ts-ignore
+        document.querySelector('input[name=payer]').value = lastdocument['payer']['name'];
+        selected.sender = lastdocument['sender']['id'];
+        selected.receiver = lastdocument['receiver']['id'];
+        selected.payer = lastdocument['payer']['id'];
     }
 
     onMount(()=>{
-        fetchListOrg();
         // Назначим классы
-        for (let item of class_list) {
-            let _input_element = document.querySelectorAll('[data-svelte-search] input, .date-time-field input');
-            _input_element.forEach(element => {
-                element.classList.add(item);
-            });
+        let _dateInputTag = document.querySelector('.date-time-field input');
+        _dateInputTag.classList.add('input');
+        _dateInputTag.classList.add('is-small');
+        // New number
+        if (editDocument_id !== -1) getDocumentEditData();
+        else {
+            getDocumentNumber();
         }
+        document.querySelector('[name=number]').setAttribute('disabled', 'true');
     })
-    /**
-     * Из объекта даты делает строку dd.mm.yyyy
-     * @param date
-     */
-    function getDateString(date) {
-        return date.toLocaleDateString();
-    }
-    export let actiate_form = false; // bind: по этому флагу запускаем момент открытия формы
-$:  if (actiate_form) { 
-        fetchDocumentNumber();
-        document.querySelector('[name=number]').setAttribute('disabled', 'true');   // number disabled, on:doubleclick=>enabled
-    }
+
     /**
      * Преобразование строки из Input'а в число Float для вычислений.
      * Оставляем тольок цифры, заменяем запятую на точку...
@@ -175,17 +379,17 @@ $:  if (actiate_form) {
     
     <div class="field is-horizontal">
         <div class="field-label is-small is-hidden-mobile">
-            <label for="" class="label" on:click={fetchDocumentNumber}>Номер и дата</label>
+            <label for="" class="label get" on:click={getDocumentNumber}>Номер и дата</label>
         </div>
         <div class="field-body">
             <div class="field is-grouped is-justify-content-space-between">
                 <div class="control" on:dblclick={(e)=>e.currentTarget.querySelector('[name=number]').removeAttribute('disabled')}>
                     <input type="text" class="input is-small" placeholder="номер" name="number" maxlength="15"
-                        bind:value={doc_number} required disabled>
+                        bind:value={documentformdata.number} required disabled>
                 </div>
                 <p class="control control-dateinput">
                     <DateInput 
-                        value={date} 
+                        value={new Date()} 
                         format='dd.MM.yyyy'
                         locale={
                             {
@@ -196,7 +400,7 @@ $:  if (actiate_form) {
                             }
                         }
                         closeOnSelection={true}
-                        placeholder={getDateString(date)} />
+                        placeholder={new Date().toLocaleDateString()} />
                 </p>
             </div>
         </div>
@@ -204,13 +408,13 @@ $:  if (actiate_form) {
 
     <div class="field is-horizontal">
         <div class="field-label is-small is-hidden-mobile">
-            <label for="" class="label">Город</label>
+            <label for="" class="label get" on:click={fillFieldHandler}>Город</label>
         </div>
         <div class="field-body">
             <div class="field">
                 <p class="control">
                     <input type="text" class="input is-small" placeholder="город" 
-                        name="city" maxlength="100" form="documentform">
+                        name="city" maxlength="100" form="documentform" bind:value={documentformdata.city}>
                 </p>
             </div>
         </div>
@@ -218,13 +422,13 @@ $:  if (actiate_form) {
 
     <div class="field is-horizontal">
         <div class="field-label is-small is-hidden-mobile">
-            <label for="" class="label">Номер ТС</label>
+            <label for="" class="label get" on:click={fillFieldHandler}>Авто</label>
         </div>
         <div class="field-body">
             <div class="field">
                 <p class="control">
                     <input type="text" class="input is-small" placeholder="№ ТС"
-                        name="truck" maxlength="20" form="documentform">
+                        name="truck" maxlength="20" form="documentform" bind:value={documentformdata.truck}>
                 </p>
             </div>
         </div>
@@ -232,16 +436,15 @@ $:  if (actiate_form) {
     
     <div class="field is-horizontal">
         <div class="field-label is-small is-hidden-mobile">
-            <label for="" class="label">Отправитель</label>
+            <label for="" class="label get" on:click={fillOrgHandler}>Отправитель</label>
         </div>
         <div class="field-body">
             <div class="field">
                 <div class="control">
-                    <Inputlist 
-                        placeholder={placeholders.sender}
-                        data={list_org}
-                        on:select={({ detail }) => (selected.sender = detail.original)} 
-                        on:clear={() => selected.sender = {}} />
+                    <SimpleAutoComplete {...ac_props} 
+                        placeholder={ac_props.placeholder + ' отправителя'}
+                        name="sender"
+                        bind:value={selected.sender} />
                 </div>
             </div>
         </div>
@@ -249,16 +452,15 @@ $:  if (actiate_form) {
 
     <div class="field is-horizontal">
         <div class="field-label is-small is-hidden-mobile">
-            <label for="" class="label">Получатель</label>
+            <label for="" class="label get" on:click={fillOrgHandler}>Получатель</label>
         </div>
         <div class="field-body">
             <div class="field">
                 <div class="control">
-                    <Inputlist 
-                        placeholder={placeholders.receiver} 
-                        data={list_org}
-                        on:select={({ detail }) => (selected.receiver = detail.original)} 
-                        on:clear={() => selected.receiver = {}} />
+                    <SimpleAutoComplete {...ac_props} 
+                        placeholder={ac_props.placeholder + ' получателя'}
+                        name="receiver"
+                        bind:value={selected.receiver} />
                 </div>
             </div>
         </div>
@@ -266,16 +468,15 @@ $:  if (actiate_form) {
 
     <div class="field is-horizontal">
         <div class="field-label is-small is-hidden-mobile">
-            <label for="" class="label">Плательщик</label>
+            <label for="" class="label get" on:click={fillOrgHandler}>Плательщик</label>
         </div>
         <div class="field-body">
             <div class="field">
                 <div class="control">
-                    <Inputlist 
-                        placeholder={placeholders.payer} 
-                        data={list_org}
-                        on:select={({ detail }) => (selected.payer = detail.original)} 
-                        on:clear={() => selected.payer = {}} />
+                    <SimpleAutoComplete {...ac_props} 
+                        placeholder={ac_props.placeholder + ' плательщика'}
+                        name="payer"
+                        bind:value={selected.payer} />
                 </div>
             </div>
         </div>
@@ -283,19 +484,20 @@ $:  if (actiate_form) {
     
     <div class="field">
         <div class="control">
-            <slot />
+            <Docitemform {editDocument_id} />
         </div>
     </div>
     
-    <form id="documentform" on:submit|preventDefault={getDocumentFormData}>
+    <form id="documentform" on:submit|preventDefault={postDocumentFormData} on:reset={clearForm}>
         <div class="field is-horizontal">
             <div class="field-label is-small is-hidden-mobile">
-                <label for="" class="label">Особые отметки</label>
+                <label for="" class="label get" on:click={fillFieldHandler}>Особые отметки</label>
             </div>
             <div class="field-body">
                 <div class="field">
                     <p class="control">
-                        <textarea class="textarea is-small" name="spec_notes" placeholder="особые отметки" rows="2"></textarea>
+                        <textarea class="textarea is-small" name="spec_notes" placeholder="особые отметки" rows="2"
+                            bind:value={documentformdata.spec_notes}></textarea>
                     </p>
                 </div>
             </div>
@@ -303,13 +505,13 @@ $:  if (actiate_form) {
 
         <div class="field is-horizontal">
             <div class="field-label is-small is-hidden-mobile">
-                <label for="" class="label">Адрес доставки</label>
+                <label for="" class="label get" on:click={fillFieldHandler}>Адрес доставки</label>
             </div>
             <div class="field-body">
                 <div class="field">
                     <p class="control">
                         <input type="text" class="input is-small" placeholder="адрес доставки"
-                            name="destination_address" maxlength="256">
+                            name="destination_address" maxlength="256" bind:value={documentformdata.destination_address}>
                     </p>
                 </div>
             </div>
@@ -317,12 +519,13 @@ $:  if (actiate_form) {
 
         <div class="field is-horizontal">
             <div class="field-label is-small is-hidden-mobile">
-                <label for="" class="label">Условия договора</label>
+                <label for="" class="label get" on:click={fillFieldHandler}>Условия договора</label>
             </div>
             <div class="field-body">
                 <div class="field">
                     <p class="control">
-                        <textarea class="textarea is-small" name="text" id="" placeholder="условия договора" rows="3"></textarea>
+                        <textarea class="textarea is-small" name="text" id="" placeholder="условия договора" rows="3"
+                        bind:value={documentformdata.text}></textarea>
                     </p>
                 </div>
             </div>
@@ -338,15 +541,13 @@ $:  if (actiate_form) {
                         <button class="button is-small is-link is-outlined is-fullwidth" type="submit">Сохранить</button>
                     </p>
                     <p class="control">
-                        <button class="button is-small is-outlined" type="reset">Отмена</button>
+                        <button class="button is-small is-outlined" type="reset">Очистить</button>
                     </p>
                 </div>
             </div>
         </div>
     </form>
-    <pre>{JSON.stringify(documentformdata, null, 2)}</pre>
 </div>
-
 
 <style>
     :global(.control-dateinput) {
@@ -354,5 +555,11 @@ $:  if (actiate_form) {
     }
     :global(.control-dateinput .date-time-field input) {
         width: 100%;
+    }
+    :global(label.get) {
+        cursor: pointer;
+    }
+    :global(label.get:hover) {
+        color: grey;
     }
 </style>

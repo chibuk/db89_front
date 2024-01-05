@@ -1,21 +1,14 @@
 <script>
     import { createEventDispatcher } from 'svelte';
 
-    const props = {
-        label: "Создать:",
-        help: "",
-        placeholder: "Введите наименование",
-        maxlength: 128,
-        name: "name",
-        id: "id_name",
-        danger: false,
-        value: "",
-    }
+    let input_danger = false;
+    let input_value = '';
 
     // @ts-ignore
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // do global
     // @ts-ignore
     const url = "https://" + document.domain + app.dataset.api;
+    // const url = "http://127.0.0.1:8000/api/v1/items/";      //dev
     const dispatch = createEventDispatcher();
     const eventname = 'updatetable';
     const notificationeventname = 'notification';
@@ -28,11 +21,9 @@
                 text: 'Не удалось сохранить: <br>'
     };
 
-    const additem = async (event) => {
-        const _form = event.currentTarget;
-        let data = {name: _form.elements[0].value};
-        if (await send(data)) _form.elements[0].value = '';   // else ...
-        else props.danger = true;
+    const additem = async () => {
+        if (await send({name: input_value})) input_value = '';   // else ...
+        else input_danger = true;
     }
 
     /* Стоит ли оставлять такую функцию или переделать BackEnd?
@@ -75,28 +66,19 @@
         }
     }
 </script>
-
-<form on:submit|preventDefault={additem} name="itemform">
+<div class="mt-1 ml-2" id='svelte-itemform-contaner'>
     <div class="field is-horizontal">
         <div class="field-label is-normal">
-            <label class="label" for="{props.name}">{props.label}</label>
+            <label class="label" for="nmae_item">Создать:</label>
         </div>
         <div class="field-body">
             <div class="field has-addons">
-                <div class="control is-expanded">
-                    <input 
-                        class="input" class:is-danger={props.danger}
-                        type="text" 
-                        name={props.name}
-                        maxlength={props.maxlength}
-                        required
-                        id={props.id} 
-                        placeholder={props.placeholder}
-                        value={props.value}
-                        on:input={()=>props.danger=false}>
+                <div class="control">
+                    <input class="input" class:is-danger={input_danger} type="text" name='name_item' maxlength=256 
+                        placeholder='Наименование' bind:value={input_value} on:input={()=>input_danger=false} />
                 </div>
                 <div class="control">
-                    <button class="button is-success" type="submit" title='ввод'>
+                    <button class="button is-link" type="submit" title='ввод' on:click={additem}>
                         <span class="icon">
                             <i class="fa-light fa-arrow-right"></i>
                         </span>
@@ -105,4 +87,9 @@
             </div>
         </div>
     </div>
-</form>
+</div>
+<style>
+    div#svelte-itemform-contaner {
+        display: inline-block;
+    }
+</style>

@@ -1,5 +1,4 @@
 <script>
-    // import Organizationform from "./organizationform.svelte";   // POST Organization form
     import {onMount} from "svelte";
 
     import Notification from "../lib/notification.svelte";
@@ -17,31 +16,29 @@
     let activate_modal = false;
 
     // @ts-ignore
-    // const url = "http://127.0.0.1:8000/api/v1/organizations/";
     const url = "https://" + document.domain + app.dataset.api;
+    // const url = "http://" + document.domain + ":8000" + app.dataset.api; //dev
 
     import Tablegen from "../lib/tablegen.svelte";  // Content
     let tablegen_instance;
-    let tablegen_data = [];
     const href = "/organization/"   // <a href=""> in Tablegen rows
-    const tablegen_id = "tablegen_" + Math.round(Math.random()*10000); //for fun
+    const tablegen_id = "tablegen_id"
 
      /* sorting data by "id" */
-     function srt (a, b) {
-        if (a.id < b.id) return 1;
-        else if (a.id > b.id) return -1;
-        else return 0;
-    }
+    //  function srt (a, b) {
+    //     if (a.id < b.id) return 1;
+    //     else if (a.id > b.id) return -1;
+    //     else return 0;
+    // }
 
-    const loadTable = async () => {
-        tablegen_data = await fetch(url).then((x) => x.json());    
+    const loadTable = async () => {  
         tablegen_instance?.$destroy();
         tablegen_instance = new Tablegen({
             target: document.getElementById(tablegen_id),
             props: {
-                table_content: tablegen_data.sort(srt),
+                url: url,
+                fields: ['id', 'name', 'inn', 'address', 'email', 'phone', 'bank'],
                 href: href,
-                checkbox_name: 'id',
             }
         })
     }
@@ -53,12 +50,36 @@
         setTimeout(() => {notificationdata.dispaly='none';}, 10000);
     }
 
+    function getEdit_id () {
+        let _form = document.getElementById('tablegen_id').parentNode;
+        // @ts-ignore
+        const checkboxes = new FormData(_form);  // чекбоксы [['id','1'], ['id','2']
+        return checkboxes.get('id') // первый из отмеченных идет на редактирование
+    }
+
+    function closehandler() {
+        activate_modal=false;
+    }
+
+    let orgFormInstance = undefined;    // чтобы потом удалять инстансы предыдущих форм
+    const activateOrganizationForm = (_id='') => {
+        orgFormInstance?.$destroy();
+        orgFormInstance = new Organizationform({
+            target: document.querySelector("#organization_form_container"),
+            props: {id: _id},
+        })
+        orgFormInstance.$on('updatetable', loadTable);
+        orgFormInstance.$on('notification', notificationHandler);
+        orgFormInstance.$on('close', closehandler);
+        activate_modal=true;
+    }
+
     onMount(loadTable);
     document.querySelector("#navbar-item-organizations").classList.add("is-active");
 </script>
 
 <Modalcontainer bind:active={activate_modal}>
-    <Organizationform on:updatetable={loadTable} on:notification={notificationHandler} />
+    <div id="organization_form_container"></div>
 </Modalcontainer>
 
 <h4 class="title is-4 pl-4 pt-5">Список организаций</h4>
@@ -67,8 +88,13 @@
     <div id={tablegen_id}></div>
     <Delete on:notification={notificationHandler} 
             on:updatetable={loadTable} 
-            bind:disabled={button_disabled} />
-    <button class="button is-link is-outlined mt-1" on:click|preventDefault={()=>activate_modal=true}>
+            bind:disabled={button_disabled} uriPath="organizations" />
+    
+    <button class="button is-link is-outlined mt-1" on:click|preventDefault={()=>activateOrganizationForm(getEdit_id())} 
+        title='Редактировать' disabled={!button_disabled}>
+        <i class="fa-light fa-pen"></i>
+    </button>
+    <button class="button is-link is-outlined mt-1" on:click|preventDefault={()=>activateOrganizationForm()} title='Добавить'>
         <i class="fa-light fa-plus"></i>
     </button>
 </form>
@@ -76,3 +102,9 @@
 <Notification bind:display={notificationdata.dispaly} 
               bind:text={notificationdata.text} 
               bind:add_class={notificationdata.add_class} />
+
+<style>
+    form {
+        height: calc(100% - 5rem);
+    }
+</style>
